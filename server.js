@@ -1,52 +1,76 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const pgp = require('pg-promise')();
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-
 const cors = require('cors');
+const db = require('./db');
 
+//const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt');
+//const jwt = require('jsonwebtoken');
 
 const app = express();
 const port = 3000;
 
-// Подключение к базе данных PostgreSQL
-const db = pgp({
-  connectionString: 'postgresql://postgres:12345@localhost:5432/DominiDB'
+app.use(cors());
+app.use(express.json());
+
+// Запуск сервера
+app.listen(port, () => {
+  console.log(`Сервер запущен на порту ${port}`);
 });
 
-// Middleware для обработки JSON-запросов
-app.use(bodyParser.json());
+// Аутентификация пользователя
+app.post('/loginForm', async (req, res) => {
+  const { username, password } = req.body.data;
 
-app.use(cors());
+    
+    console.log('введённый: ' + username, password);
+    try {
+      // Получаем данные пользователя из базы данных
+      const login_user = await db.oneOrNone('SELECT * FROM users WHERE login = $1 AND password = $2', [username, password]);
+      console.log('из базы: ' + login_user.login, login_user.password)
+                  
+      if (login_user.login === username && login_user.password === password)
+      {
+        console.log('Пользователь найден');
+        res.status(200).json({ success: true, user: login_user });
+      } 
+      else 
+      {
+        console.log('Пользователь не найден');
+        res.status(404).json({ success: false, message: 'Пользователь не найден' });
+      }
+    } 
+    catch (error) {
+        console.error('Ошибка при выполнении запроса к базе данных:', error);
+        res.status(500).json({ success: false, message: 'Ошибка при выполнении запроса к базе данных' });
+    }
+  });
 
-// Регистрация пользователя
-app.post('/register', async (req, res) => {
-  const { username, password } = req.body;
+//Регистрация пользователя
+app.post('/registration', async (req, res) => {
+  const { username, password } = req.body.data;
+  
+  console.log(req.body.data);
+  
   try {
-    // Хэшируем пароль перед сохранением в базу данных
-    const hashedPassword = await bcrypt.hash(password, 10);
-    // Вставляем данные нового пользователя в таблицу users
-    await db.none('INSERT INTO users(username, password) VALUES($1, $2)', [username, hashedPassword]);
-    res.json({ message: 'Пользователь успешно зарегистрирован' });
-  } catch (error) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+    
+      await db.none('INSERT INTO users(login, password) VALUES($1, $2)', [username, hashedPassword]);
+      res.json({ message: 'Пользователь успешно зарегистрирован' });
+  } 
+  catch (error) {
     console.error('Ошибка регистрации пользователя:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 
-// Аутентификация пользователя
-app.post('/loginForm', async (req, res) => {
-  const { username, password } = req.body;
-
     // Получаем данные пользователя из базы данных
-    const user = await db.oneOrNone('SELECT Login FROM Users WHERE Login = $1', username);
-    if (!user) {
-      return res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
-    }
+   
+    // if (!user) {
+    //    return res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
+    // }
 
-    console.log(req);
-    return user;
+
     // Сравниваем хэши паролей
   //   const match = await bcrypt.compare(password, user.password);
   //   if (!match) {
@@ -60,9 +84,8 @@ app.post('/loginForm', async (req, res) => {
   //   res.status(500).json({ error: 'Ошибка сервера' });
   //}
 
-  });
 
-// Запуск сервера
-app.listen(port, () => {
-  console.log(`Сервер запущен на порту ${port}`);
-});
+
+
+
+

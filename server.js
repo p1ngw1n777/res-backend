@@ -17,6 +17,34 @@ app.listen(port, () => {
   console.log(`Сервер запущен на порту ${port}`);
 });
 
+//Отзывы
+app.get('/', async (req, res) => {
+  try {
+    const reviewsFromDB = await db.any('SELECT photo, name, surname, text, wphoto FROM reviews');
+    
+
+    if (reviewsFromDB) {
+      // Если данные из базы данных пусты, отправляем данные по умолчанию
+      const defaultData = [
+        {
+          photo: "photo",
+          name: "Default Name",
+          surname: "Default Surname",
+          text: "Default Review Text",
+          wphoto: "wphoto",
+        }
+      ];
+    }
+
+    res.status(200).json(reviewsFromDB);
+
+  } catch (error) {
+    console.error('Ошибка при выполнении запроса:', error);
+    res.status(500).json({ success: false, message: 'Ошибка при выполнении запроса' });
+  }
+
+});
+
 // Аутентификация пользователя
 app.post('/loginForm', async (req, res) => {
   const { username, password } = req.body.data;

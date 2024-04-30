@@ -21,7 +21,7 @@ app.listen(port, () => {
 app.get('/', async (req, res) => {
   try {
     const reviewsFromDB = await db.any('SELECT photo, name, surname, text, wphoto FROM reviews');
-    
+    const categoryFromDB = await db.any('SELECT category_name, category_url_photo FROM category');
 
     if (reviewsFromDB) {
       // Если данные из базы данных пусты, отправляем данные по умолчанию
@@ -36,7 +36,17 @@ app.get('/', async (req, res) => {
       ];
     }
 
-    res.status(200).json(reviewsFromDB);
+    if (categoryFromDB) {
+      // Если данные из базы данных пусты, отправляем данные по умолчанию
+      const defaultData = [
+        {
+          category_name: "Default Name",
+          category_url_photo: "Defailt Photo",
+        }
+      ];
+    }
+
+    res.status(200).json({obj1: reviewsFromDB, obj2: categoryFromDB});
 
   } catch (error) {
     console.error('Ошибка при выполнении запроса:', error);
